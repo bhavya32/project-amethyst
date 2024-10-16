@@ -16,9 +16,9 @@ import { variants } from '@components/user/user-header';
 import { UserEditProfile } from '@components/user/user-edit-profile';
 import { UserShare } from '@components/user/user-share';
 import type { LayoutProps } from './common-layout';
-import Link from 'next/link';
+import { ViewChat } from '@components/view/view-chat';
 
-export function UserHomeLayout({ children }: LayoutProps): JSX.Element {
+export function ChatHomeLayout({ children }: LayoutProps): JSX.Element {
   const { user, isAdmin } = useAuth();
   const { user: userData, loading } = useUser();
 
@@ -42,7 +42,7 @@ export function UserHomeLayout({ children }: LayoutProps): JSX.Element {
     <>
       {userData && (
         <SEO
-          title={`${`${userData.name} (@${userData.username})`} / Twitter`}
+          title={`${`${userData.name} (@${userData.username})`}`}
         />
       )}
       <motion.section {...variants} exit={undefined}>
@@ -50,7 +50,7 @@ export function UserHomeLayout({ children }: LayoutProps): JSX.Element {
           <Loading className='mt-5' />
         ) : !userData ? (
           <>
-            <UserHomeCover />
+            
             <div className='flex flex-col gap-8'>
               <div className='relative flex flex-col gap-3 px-4 py-3'>
                 <UserHomeAvatar />
@@ -64,46 +64,9 @@ export function UserHomeLayout({ children }: LayoutProps): JSX.Element {
               </div>
             </div>
           </>
-        ) : (
-          <>
-            <UserHomeCover coverData={coverData} />
-            <div className='relative flex flex-col gap-3 px-4 py-3'>
-              <div className='flex justify-between'>
-                <UserHomeAvatar profileData={profileData} />
-                {isOwner ? (
-                  <UserEditProfile />
-                ) : (
-                  <div className='flex gap-2 self-start'>
-                    <UserShare username={userData.username} />
-                    <Link href={`/chats/${userData.username}`}>
-                      <Button
-                        className='dark-bg-tab group relative border border-light-line-reply p-2
-                                  hover:bg-light-primary/10 active:bg-light-primary/20 dark:border-light-secondary 
-                                  dark:hover:bg-dark-primary/10 dark:active:bg-dark-primary/20'
-                      >
-                        <HeroIcon className='h-5 w-5' iconName='EnvelopeIcon' />
-                        <ToolTip tip='Message' />
-                      </Button>
-                    </Link>
-                    <FollowButton
-                      userTargetId={userData.id}
-                      userTargetUsername={userData.username}
-                    />
-                    {isAdmin && <UserEditProfile hide />}
-                  </div>
-                )}
-              </div>
-              <UserDetails {...userData} />
-            </div>
-          </>
-        )}
+        ):(<ViewChat></ViewChat>)}
       </motion.section>
-      {userData && (
-        <>
-          <UserNav />
-          {children}
-        </>
-      )}
+      
     </>
   );
 }
