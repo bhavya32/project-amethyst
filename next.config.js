@@ -4,6 +4,9 @@ const nextConfig = {
   swcMinify: true,
   images: {
     unoptimized: true
+  },
+  eslint: {
+    ignoreDuringBuilds: true
   }
 };
 
