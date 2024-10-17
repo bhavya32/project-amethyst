@@ -33,10 +33,11 @@ export function ChatHomeLayout({ children }: LayoutProps): JSX.Element {
   const profileData = userData
     ? { src: userData.photoURL, alt: userData.name }
     : null;
-
+console.log(user)
+console.log(userData)
   const { id: userId } = user ?? {};
 
-  const isOwner = userData?.id === userId;
+  const isOwner = userData!.id === userId;
 
   return (
     <>
