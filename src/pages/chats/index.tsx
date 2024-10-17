@@ -1,6 +1,6 @@
 import { useWindow } from '@lib/context/window-context';
 import { useInfiniteScroll } from '@lib/hooks/useInfiniteScroll';
-import { tweetsCollection } from '@lib/firebase/collections';
+import { chatOverviewCollection, tweetsCollection } from '@lib/firebase/collections';
 import { HomeLayout, ProtectedLayout } from '@components/layout/common-layout';
 import { MainLayout } from '@components/layout/main-layout';
 import { SEO } from '@components/common/seo';
@@ -11,9 +11,10 @@ import { MainHeader } from '@components/home/main-header';
 import { Tweet } from '@components/tweet/tweet';
 import { Loading } from '@components/ui/loading';
 import { Error } from '@components/ui/error';
-import type { ReactElement, ReactNode } from 'react';
+import { useEffect, useState, type ReactElement, type ReactNode } from 'react';
 import { Aside } from '@components/aside/aside';
 import { Suggestions } from '@components/aside/suggestions';
+import { format } from 'date-fns';
 
 import { usersCollection } from '@lib/firebase/collections';
 import { useCollection } from '@lib/hooks/useCollection';
@@ -23,7 +24,13 @@ import {
   query,
   where,
   orderBy,
-  documentId
+  documentId,
+  collection,
+  getDocs,
+  getDoc,
+  Timestamp,
+  FieldValue,
+  onSnapshot
 } from 'firebase/firestore';
 import { UserCards } from '@components/user/user-cards';
 import cn from 'clsx';
@@ -41,32 +48,75 @@ import { UserTooltip } from '@components/user/user-tooltip';
 import { UserUsername } from '@components/user/user-username';
 import { UserName } from '@components/user/user-name';
 import { UserAvatar } from '@components/user/user-avatar';
+import { useUser } from '@lib/context/user-context';
+import { useAuth } from '@lib/context/auth-context';
+import { db } from '@lib/firebase/app';
+import { ChatOverview } from '@lib/types/chat';
 
 type FollowType = 'following' | 'followers';
 
 type CombinedTypes = StatsType | FollowType;
+type ChatWithUserDetails = ChatOverview & { otherUser: User | null };
+const formatTimestamp = (timestamp: Timestamp | FieldValue) => {
+  let d = (timestamp as Timestamp).toDate()
+  if (format(d, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd')) {
+    return format(d, 'HH:mm');
+  } else {
+    return format(d, 'MMM dd, yyyy');
+  }
+  //return format(d, 'HH:mm');
+};
 
-
-export default function Home(): JSX.Element {
+export default function Chats(): JSX.Element {
   const { isMobile } = useWindow();
+  const {user} = useAuth()
+  const [loadingChats, setLoading] = useState(true);
+  const [chatList, setChatList] = useState([] as ChatWithUserDetails[]);
 
-  const { data, loading, LoadMore } = useInfiniteScroll(
-    tweetsCollection,
-    [where('parent', '==', null), orderBy('createdAt', 'desc')],
-    { includeUser: true, allowNull: true, preserve: true }
-  );
-  const { data: chatList, loading: chatsLoading } = useCollection(
-    query(
-      usersCollection,
-      orderBy(documentId()),
-    ),
-    { allowNull: true }
-  );
+  //console.log(user)
+  useEffect(() => {
+    if (!user) return;
+  
+    const fetchChats = () => {
+      setLoading(true);
+      const q = query(
+        chatOverviewCollection,
+        where('participants', 'array-contains', user.id),
+        orderBy('lastMessageTimestamp', 'desc')
+      );
+  
+      const unsubscribe = onSnapshot(q, async (snapshot) => {
+        const chats = snapshot.docs.map((doc) => doc.data() as ChatOverview);
+  
+        const chatsWithUserDetails = await Promise.all(
+          chats.map(async (chat) => {
+            const otherUserId = chat.participants.find((id) => id !== user.id);
+            const userDoc = await getDoc(doc(usersCollection, otherUserId));
+            const otherUser = userDoc.exists() ? (userDoc.data() as User) : null;
+            return { ...chat, otherUser };
+          })
+        );
+  
+        setChatList(chatsWithUserDetails);
+        setLoading(false);
+      });
+  
+      return unsubscribe;
+    };
+  
+    const unsubscribe = fetchChats();
+  
+    return () => {
+      unsubscribe();
+    };
+  }, [user]);
+
+  //console.log(chatList)
   const noStatsData = {
-    title: 'Looking for followers?',
-    imageData: { src: '/assets/no-followers.png', alt: 'No followers' },
+    title: 'No Chats Found',
+    imageData: { src: '/assets/no-followers.png', alt: 'No chats' },
     description:
-      'When someone follows this account, they’ll show up here. Tweeting and interacting with others helps boost followers.'
+      'You can initiate chats by going to user profiles and clicking on the chat button.'
   };
   return (
     <MainContainer>
@@ -81,41 +131,54 @@ export default function Home(): JSX.Element {
       
       <section
       className={cn(
-        loading && 'flex items-center justify-center'
+        loadingChats && 'flex items-center justify-center'
       )}
     >
-      {loading ? (
+      {loadingChats ? (
         <Loading className={'mt-5'} />
       ) : (
         <AnimatePresence mode='popLayout'>
-          {data?.length ? (
-            data.map((userData) => (
-              <motion.div layout='position' key={userData.id} {...variants}>
+          {chatList?.length ? (
+            chatList?.map((chat) => {
+              //const user = chat.participants.find((participant:User) => participant.id !== user!.id)
+              //let userData = user
+
+              return(
+              
+              <motion.div layout='position' key={chat.otherUser?.id} {...variants}>
                 {/* <UserCard {...userData} follow={follow} modal={modal} /> */}
-                <Link href={`/chats/${userData.user.username}`}>
+                <Link href={`/chats/${chat.otherUser?.username}`}>
                     <a
-                      className='accent-tab hover-animation grid grid-cols-[auto,1fr] gap-3 px-4
-                                py-3 hover:bg-light-primary/5 dark:hover:bg-dark-primary/5'
+                      className='items-center accent-tab hover-animation gap-3 px-4
+                                py-3 hover:bg-light-primary/5 dark:hover:bg-dark-primary/5 flex flex-row'
                     >
-                     <UserTooltip avatar {...userData.user} modal={false}>
-                      <UserAvatar src={userData.user.photoURL} alt={userData.user.name} username={userData.user.username} />
+                      
+                        <div className="w-full accent-tab hover-animation grid grid-cols-[auto,1fr] gap-3 hover:bg-light-primary/5 dark:hover:bg-dark-primary/5 flex flex-row">
+                     <UserTooltip avatar {...chat.otherUser!} modal={false}>
+                      <UserAvatar src={chat.otherUser!.photoURL} alt={chat.otherUser!.name} username={chat.otherUser!.username} />
                     </UserTooltip> 
                       <div className='flex flex-col gap-1 truncate xs:overflow-visible'>
                         <div className='flex items-center justify-between gap-2 truncate xs:overflow-visible'>
                           <div className='flex flex-col justify-center truncate xs:overflow-visible xs:whitespace-normal'>
-                          <UserTooltip {...userData.user} modal={false}>
+                          <div className='flex flex-row'>
                             <UserName
+                              disableLink={true}
                               className='-mb-1'
-                              name={userData.user.name}
-                              username={userData.user.username}
-                              verified={userData.user.verified}
+                              name={chat.otherUser!.name}
+                              username={chat.otherUser!.username}
+                              verified={chat.otherUser!.verified}
                             />
-                          </UserTooltip>
+                            <div className='truncate text-light-secondary dark:text-dark-secondary -mb-1 ml-2'
+                              tabIndex={-1}>@{chat.otherUser?.username} · {formatTimestamp(chat.lastMessageTimestamp)}</div>
+                            
+                          </div>
                             <div className='flex items-center gap-1 text-light-secondary dark:text-dark-secondary'>
                               
-                            <UserTooltip {...userData.user} modal={false}>
-                              <UserUsername username={userData.user.username} />
-                            </UserTooltip>
+                            
+                              
+                              <div className='truncate text-light-secondary dark:text-dark-secondary'
+                              tabIndex={-1}>{chat.lastSender == user!.id ? "You: ":""}{chat.lastMessage}</div>
+                            
                             
                             </div>
                           </div>
@@ -123,10 +186,15 @@ export default function Home(): JSX.Element {
                         </div>
                         
                       </div>
+                      </div>
+                      {chat.unreadMessages[user!.id] ? (
+                      <div className="w-2.5 h-2.5 bg-main-accent rounded-full inline-block">
+                      </div>):(<></>)}
+                      
                     </a>
                   </Link>
               </motion.div>
-            ))
+            )})
           ) : (
             <StatsEmpty {...noStatsData} modal={false} />
           )}
@@ -154,7 +222,7 @@ export default function Home(): JSX.Element {
   );
 }
 
-Home.getLayout = (page: ReactElement): ReactNode => (
+Chats.getLayout = (page: ReactElement): ReactNode => (
   <ProtectedLayout>
     <MainLayout>
       {page}

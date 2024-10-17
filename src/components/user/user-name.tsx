@@ -9,6 +9,7 @@ type UserNameProps = {
   username?: string;
   className?: string;
   iconClassName?: string;
+  disableLink? : boolean;
 };
 
 export function UserName({
@@ -17,6 +18,7 @@ export function UserName({
   verified,
   username,
   className,
+  disableLink,
   iconClassName
 }: UserNameProps): JSX.Element {
   const CustomTag = tag ? tag : 'p';
@@ -27,6 +29,7 @@ export function UserName({
         className={cn(
           'flex items-center gap-1 truncate font-bold',
           username ? 'custom-underline' : 'pointer-events-none',
+          disableLink && 'pointer-events-none',
           className
         )}
         tabIndex={username ? 0 : -1}

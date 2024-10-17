@@ -7,7 +7,7 @@ import { db } from './app';
 import type { CollectionReference } from 'firebase/firestore';
 import type { Bookmark } from '@lib/types/bookmark';
 import type { Stats } from '@lib/types/stats';
-import { chatConverter } from '@lib/types/chat';
+import { chatConverter, chatOverviewConverter } from '@lib/types/chat';
 
 export const usersCollection = collection(db, 'users').withConverter(
   userConverter
@@ -19,6 +19,11 @@ export const tweetsCollection = collection(db, 'tweets').withConverter(
 export const privateChatsCollection = collection(db, 'privateChats').withConverter(
   chatConverter
 )
+
+export const chatOverviewCollection = collection(db, 'chats').withConverter(
+  chatOverviewConverter
+)
+
 export function userBookmarksCollection(
   id: string
 ): CollectionReference<Bookmark> {

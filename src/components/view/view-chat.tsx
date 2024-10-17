@@ -18,7 +18,22 @@ export function ViewChat(): JSX.Element {
   const [newMessage, setNewMessage] = useState('');
   const chatId = getChatId(user!.id, target!.id);
   useEffect(() => {
-    
+    const checkChatExists = async () => {
+        const chatRef = doc(db, 'chats', chatId).withConverter(chatOverviewConverter);
+        const chatDoc = await getDoc(chatRef);
+
+        if (chatDoc.exists()) {
+            const data = chatDoc.data()!;
+            await setDoc(chatRef, {
+                unreadMessages: {
+                    ...data.unreadMessages,
+                    [user!.id]: 0
+                }
+            }, { merge: true });
+        }
+    };
+
+    checkChatExists();
     const messagesRef = collection(db, `chats/${chatId}/messages`).withConverter(chatConverter);
     const q = query(messagesRef, orderBy('timestamp', 'asc'));
 
@@ -137,7 +152,7 @@ return (
                 border-radius: 10px;
                 max-width: 70%;
                 min-width: 10%;
-                text-align: center;
+                text-align: center!important;
                 
             }
             .sent {
