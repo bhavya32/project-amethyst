@@ -139,10 +139,10 @@ return (
             .chat-window {
                 display: flex;
                 flex-direction: column;
-                height: calc(100vh - 54px);
+                height: calc(100dvh - 54px);
             }
                 .chat-window.mobile {
-                    height: calc(100vh - 104px);
+                    height: calc(100dvh - 104px);
                 }
             .messages {
                 
