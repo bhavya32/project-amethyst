@@ -55,6 +55,19 @@
           "order": "DESCENDING"
         }
       ]
+    },{
+      "collectionGroup": "chats",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "participants",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "lastMessageTimestamp",
+          "order": "DESCENDING"
+        }
+      ]
     },
     {
       "collectionGroup": "tweets",

@@ -29,7 +29,8 @@ import {
   getDocs,
   getDoc,
   Timestamp,
-  FieldValue
+  FieldValue,
+  onSnapshot
 } from 'firebase/firestore';
 import { UserCards } from '@components/user/user-cards';
 import cn from 'clsx';
@@ -75,33 +76,39 @@ export default function Chats(): JSX.Element {
   //console.log(user)
   useEffect(() => {
     if (!user) return;
-
-    const fetchChats = async () => {
+  
+    const fetchChats = () => {
       setLoading(true);
       const q = query(
         chatOverviewCollection,
         where('participants', 'array-contains', user.id),
         orderBy('lastMessageTimestamp', 'desc')
       );
-
-      const chatDocs = await getDocs(q);
-      const chats = chatDocs.docs.map((doc) => doc.data() as ChatOverview);
-
-      const chatsWithUserDetails = await Promise.all(
-        chats.map(async (chat) => {
-          const otherUserId = chat.participants.find((id) => id !== user.id);
-          const userDoc = await getDoc(doc(usersCollection, otherUserId));
-          const otherUser = userDoc.exists() ? (userDoc.data() as User) : null;
-          return { ...chat, otherUser };
-          
-        })
-      );
-
-      setChatList(chatsWithUserDetails);
-      setLoading(false);
+  
+      const unsubscribe = onSnapshot(q, async (snapshot) => {
+        const chats = snapshot.docs.map((doc) => doc.data() as ChatOverview);
+  
+        const chatsWithUserDetails = await Promise.all(
+          chats.map(async (chat) => {
+            const otherUserId = chat.participants.find((id) => id !== user.id);
+            const userDoc = await getDoc(doc(usersCollection, otherUserId));
+            const otherUser = userDoc.exists() ? (userDoc.data() as User) : null;
+            return { ...chat, otherUser };
+          })
+        );
+  
+        setChatList(chatsWithUserDetails);
+        setLoading(false);
+      });
+  
+      return unsubscribe;
     };
-
-    fetchChats();
+  
+    const unsubscribe = fetchChats();
+  
+    return () => {
+      unsubscribe();
+    };
   }, [user]);
 
   //console.log(chatList)
