@@ -6,12 +6,14 @@ import { privateChatsCollection } from '@lib/firebase/collections';
 import { Chat, chatConverter, ChatOverview, chatOverviewConverter } from '@lib/types/chat';
 import { db } from '@lib/firebase/app';
 import { HeroIcon } from '@components/ui/hero-icon';
+import { useWindow } from '@lib/context/window-context';
 
 function getChatId(user1Id:string, user2Id:string): string {
     return user1Id < user2Id ? `${user1Id}_${user2Id}` : `${user2Id}_${user1Id}`;
   }
   
 export function ViewChat(): JSX.Element {
+  const { isMobile } = useWindow();
   const { user } = useAuth();
   const { user: target } = useUser();
   const [msgs, setMsgs] = useState([] as any[]);
@@ -104,7 +106,7 @@ export function ViewChat(): JSX.Element {
   };
   
 return (
-    <div className="chat-window">
+    <div className={`chat-window ${isMobile ? 'mobile' : ''}`}>
         <div className="messages">
             {msgs.map((msg, index) => (
                 <div
@@ -137,8 +139,11 @@ return (
             .chat-window {
                 display: flex;
                 flex-direction: column;
-                height: 90vh;
+                height: calc(100vh - 54px);
             }
+                .chat-window.mobile {
+                    height: calc(100vh - 104px);
+                }
             .messages {
                 
                 flex: 1;
