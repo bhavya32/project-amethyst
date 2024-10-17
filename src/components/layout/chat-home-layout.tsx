@@ -19,39 +19,35 @@ import type { LayoutProps } from './common-layout';
 import { ViewChat } from '@components/view/view-chat';
 
 export function ChatHomeLayout({ children }: LayoutProps): JSX.Element {
-  const { user, isAdmin } = useAuth();
-  const { user: userData, loading } = useUser();
-
-  const {
-    query: { id }
-  } = useRouter();
-
-  const coverData = userData?.coverPhotoURL
-    ? { src: userData.coverPhotoURL, alt: userData.name }
-    : null;
-
-  const profileData = userData
-    ? { src: userData.photoURL, alt: userData.name }
-    : null;
-console.log(user)
-console.log(userData)
-  const { id: userId } = user ?? {};
-
-  const isOwner = userData!.id === userId;
-
-  return (
-    <>
-      {userData && (
+    const { user, isAdmin } = useAuth();
+    const { user: userData, loading } = useUser();
+  
+    const { query: { id } } = useRouter();
+  
+    const coverData = userData?.coverPhotoURL
+      ? { src: userData.coverPhotoURL, alt: userData.name }
+      : null;
+  
+    const profileData = userData
+      ? { src: userData.photoURL, alt: userData.name }
+      : null;
+  
+    const { id: userId } = user ?? {};
+  
+    const isOwner = userData && userData.id === userId;
+  
+    if (loading || !userData) {
+      // Render loading or fallback UI until `userData` is available
+      return <Loading className='mt-5' />;
+    }
+  
+    return (
+      <>
         <SEO
           title={`${`${userData.name} (@${userData.username})`}`}
         />
-      )}
-      <motion.section {...variants} exit={undefined}>
-        {loading ? (
-          <Loading className='mt-5' />
-        ) : !userData ? (
-          <>
-            
+        <motion.section {...variants} exit={undefined}>
+          {!userData ? (
             <div className='flex flex-col gap-8'>
               <div className='relative flex flex-col gap-3 px-4 py-3'>
                 <UserHomeAvatar />
@@ -64,10 +60,11 @@ console.log(userData)
                 </p>
               </div>
             </div>
-          </>
-        ):(<ViewChat></ViewChat>)}
-      </motion.section>
-      
-    </>
-  );
-}
+          ) : (
+            <ViewChat />
+          )}
+        </motion.section>
+      </>
+    );
+  }
+  
